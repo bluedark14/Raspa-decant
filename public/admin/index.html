@@ -1,1 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin – Parfums Decants</title>
+<meta name="robots" content="noindex">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;background:#f3f1fa;color:#222}
+  .panel{max-width:640px;margin:0 auto;padding:20px}
+  h1{font-size:1.4rem;margin:0 0 12px} h2{font-size:1.1rem;margin:26px 0 6px}
+  label{display:block;margin:10px 0 4px;font-weight:600;font-size:.9rem}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font-size:1rem;font-family:inherit;box-sizing:border-box}
+  textarea{height:96px;resize:vertical}
+  button{margin-top:12px;padding:12px 16px;border:0;border-radius:10px;background:#0a0a0a;color:#d4af37;font-size:.95rem;font-weight:700;cursor:pointer;margin-right:6px}
+  button.alt{background:#fff;color:#0a0a0a;border:2px solid #0a0a0a}
+  .hint{font-size:.8rem;opacity:.7;margin-top:4px}
+  #out,#stats{margin-top:12px;padding:12px;background:#fff;border-radius:10px;display:none;line-height:1.6}
+  /* modo digital */
+  #digital{margin-top:14px}
+  .row{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;border:2px solid #ddd}
+  .row.golden{border-color:#d4af37}.row.platinum{border-color:#aab0bb}
+  .row .top{display:flex;justify-content:space-between;align-items:center;font-size:1.05rem}
+  .tag{font-size:.7rem;font-weight:800;letter-spacing:.15em;padding:3px 10px;border-radius:99px;color:#111}
+  .tag.golden{background:linear-gradient(135deg,#8a6a1f,#f1d77a,#9c7a1c)}.tag.platinum{background:linear-gradient(135deg,#7b828f,#f4f6f9,#8d95a3)}
+  .row input{margin-top:8px}
+  .row button{margin-top:8px;padding:10px 12px;font-size:.9rem}
+  .done{opacity:.6}
+  .sent{font-size:.85rem;color:#1a6b2f;margin-top:6px}
+  /* tarjetas para imprimir */
+  #sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;padding:20px}
+  .tcard{background:#0a0a0a;color:#fff;border-radius:14px;padding:16px;text-align:center;font-family:Georgia,serif;
+    border:3px solid #d4af37;break-inside:avoid;page-break-inside:avoid}
+  .tier{display:inline-block;margin:0 0 10px;padding:6px 20px;border-radius:99px;font-weight:800;letter-spacing:.3em;font-size:.95rem;color:#111}
+  /* GOLDEN: marco doble grueso + estrellas  |  PLATINUM: marco punteado + rombos (se distinguen en blanco y negro) */
+  .tcard.golden{border:6px double #d4af37;background:linear-gradient(160deg,#0a0a0a,#1f1805)}
+  .tcard.golden .tier{background:linear-gradient(135deg,#8a6a1f,#f1d77a,#9c7a1c)}
+  .tcard.platinum{border:3px dashed #c9ced6;background:linear-gradient(160deg,#0b0c0f,#262b33)}
+  .tcard.platinum .tier{background:linear-gradient(135deg,#7b828f,#f4f6f9,#8d95a3)}
+  .tcard.platinum h2{color:#dfe3ea}
+  .tcard h2{margin:0;color:#d4af37;font-size:1.25rem;letter-spacing:.08em}
+  .tcard img.banner{width:100%;border-radius:8px;margin-bottom:10px;display:block}
+  .tcard .store{font-size:.8rem;opacity:.85;margin-bottom:8px}
+  .qr{background:#fff;display:inline-block;padding:8px;border-radius:10px;margin:6px 0}
+  .tcard .go{font-weight:700;font-size:.95rem}
+  .tcard .id{font-size:.62rem;opacity:.75;letter-spacing:.02em;margin-top:4px;word-break:break-all}
+  @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}.panel{display:none}body{background:#fff}#sheet{padding:0;gap:8mm;grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h1>🎟️ Parfums Decants – Administrador</h1>
+  <label>Contraseña de administrador</label>
+  <input id="key" type="password" autocomplete="current-password">
 
+  <h2>1. Generar tarjetas</h2>
+  <label>Nombre de tu negocio</label>
+  <input id="store" value="Parfums Decants">
+  <label>Tipo de tarjeta</label>
+  <select id="type">
+    <option value="compra">Golden · con compra (puede ganar el decant de 2 ml)</option>
+    <option value="visita">Platinum · sin compra (solo descuentos)</option>
+  </select>
+  <label>Cantidad</label>
+  <input id="n" type="number" value="8" min="1" max="500">
+  <div class="hint">Cada código es único, solo se puede jugar una vez y solo existe si lo generas aquí.</div>
+  <button onclick="gen()">🖨️ Generar para imprimir</button>
+  <button class="alt" onclick="print()">Imprimir</button>
+  <button onclick="genDigital()">📲 Generar links digitales</button>
+  <button class="alt" onclick="loadDigital('pending')">Ver disponibles</button>
+  <button class="alt" onclick="loadDigital('sent')">Ver enviados</button>
+
+  <div id="digitalBox" style="display:none">
+    <label>Mensaje para WhatsApp <span style="font-weight:400">(usa {link} donde va el enlace)</span></label>
+    <textarea id="msg"></textarea>
+    <h3 id="digHead" style="margin:16px 0 8px;font-size:1rem"></h3>
+    <div id="digital"></div>
+  </div>
+
+  <h2>2. Canjear un premio</h2>
+  <label>Código de la tarjeta</label>
+  <input id="code" placeholder="K7M2QX9A" style="text-transform:uppercase">
+  <button onclick="lookup()">Verificar</button><button onclick="redeem()">Marcar canjeado</button><button class="alt" onclick="release()">Liberar código</button>
+  <div class="hint">«Liberar» sirve si el cliente cambió de celular o navegador y ya no puede abrir su tarjeta.</div>
+  <div id="out"></div>
+
+  <h2>3. Resumen</h2>
+  <button onclick="stats()">Ver estadísticas</button>
+  <div id="stats"></div>
+</div>
+<div id="sheet"></div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(p, body){
+  const r = await fetch(p, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({key:$("key").value, ...body})});
+  const d = await r.json().catch(()=>({})); if(!r.ok){ const err=new Error(d.error||"Error"); err.status=r.status; err.data=d; throw err; } return d;
+}
+const linkFor = code => location.origin + "/raspa/?t=" + code;
+
+/* ---------- Imprimir ---------- */
+async function gen(){
+  const store=$("store").value.trim()||"Raspa y Gana", n=+$("n").value||1, type=$("type").value;
+  try{
+    const {codes}=await api("/api/admin/generate",{n,type,channel:"print"});
+    $("digitalBox").style.display="none";
+    const sheet=$("sheet"); sheet.innerHTML="";
+    for(const t of codes){
+      const d=document.createElement("div"); d.className="tcard "+(type==="visita"?"platinum":"golden");
+      d.innerHTML=`<div class="tier">${type==="visita"?"◆ PLATINUM ◆":"★ GOLDEN ★"}</div><img class="banner" src="/tarjeta.jpg" onerror="this.remove()"><h2>¡RASPA Y GANA!</h2><div class="store">${esc(store)}</div><div class="qr"></div><div class="go">${type==="visita"?"Escanea, raspa y gana un descuento 🎁":"Escanea, raspa y gana un descuento o un decant 🎁"}</div><div class="id">${linkFor(t).replace(/^https?:\/\//,"")}</div>`;
+      sheet.appendChild(d);
+      new QRCode(d.querySelector(".qr"),{text:linkFor(t),width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
+    }
+  }catch(e){alert(e.message);}
+}
+
+/* ---------- Digital (WhatsApp) ---------- */
+const TEMPLATES = {
+  compra:"¡Gracias por tu compra en Parfums Decants! 🎁\nRasca tu tarjeta GOLDEN y gana un premio, puede salir hasta un decant de 2 ml gratis:\n{link}",
+  visita:"¡Hola! 🎁 Parfums Decants te regala una tarjeta PLATINUM. Rasca y gana un descuento:\n{link}"
+};
+let msgEdited=false;
+$("msg").addEventListener("input",()=>msgEdited=true);
+$("type").addEventListener("change",()=>{ if(!msgEdited) $("msg").value=TEMPLATES[$("type").value]; });
+$("msg").value=TEMPLATES.compra;
+const fullMsg = code => $("msg").value.replace(/\{link\}/g, linkFor(code));
+const fmt = ms => new Date(ms).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});
+
+async function genDigital(){
+  const n=+$("n").value||1, type=$("type").value;
+  try{ await api("/api/admin/generate",{n,type,channel:"digital"}); await loadDigital("pending"); }
+  catch(e){ alert(e.message); }
+}
+async function loadDigital(status){
+  try{
+    const type=$("type").value;
+    const {items}=await api("/api/admin/list",{type,status});
+    $("sheet").innerHTML=""; $("digitalBox").style.display="block";
+    if(!msgEdited) $("msg").value=TEMPLATES[type];
+    renderRows(items,status);
+    $("digitalBox").scrollIntoView({behavior:"smooth"});
+  }catch(e){ alert(e.message); }
+}
+function renderRows(items,status){
+  const box=$("digital"); box.innerHTML="";
+  $("digHead").textContent = status==="sent" ? `Ya enviados (${items.length})` : `Disponibles para enviar (${items.length}) · usa siempre el de arriba`;
+  if(!items.length){ box.innerHTML="<div class='hint'>No hay links aquí. Genera más con el botón.</div>"; return; }
+  for(const it of items){
+    const gold=it.type!=="visita", row=document.createElement("div"); row.className="row "+(gold?"golden":"platinum")+(it.sentAt?" done":"");
+    row.innerHTML=`<div class="top"><b>${it.code}</b><span class="tag ${gold?"golden":"platinum"}">${gold?"★ GOLDEN":"◆ PLATINUM"}</span></div>
+      <div class="sent">${it.sentAt?`✅ Enviado${it.sentTo?" a <b>"+esc(it.sentTo)+"</b>":""} · ${fmt(it.sentAt)}${it.opened?" · ya abierto":""}`:""}</div>
+      <input type="text" placeholder="Cliente: nombre o celular con lada (ej. 5212312834732)" value="${esc(it.sentTo||"")}">
+      <button data-a="wa">📲 WhatsApp</button><button class="alt" data-a="copy">📋 Copiar mensaje</button><button class="alt" data-a="img">🖼️ Imagen</button>`;
+    row.querySelector('[data-a="wa"]').onclick=()=>guarded(it,row,to=>{
+      const ph=to.replace(/\D/g,""), url=`https://wa.me/${ph.length>=10?ph:""}?text=${encodeURIComponent(fullMsg(it.code))}`;
+      if(!window.open(url,"_blank")) location.href=url;
+    });
+    row.querySelector('[data-a="copy"]').onclick=e=>guarded(it,row,async()=>{
+      try{await navigator.clipboard.writeText(fullMsg(it.code)); e.target.textContent="✅ Copiado";}catch(_){prompt("Copia el mensaje:",fullMsg(it.code));}
+    });
+    row.querySelector('[data-a="img"]').onclick=()=>guarded(it,row,()=>shareImage(it.code,it.type));
+    box.appendChild(row);
+  }
+}
+// Antes de enviar, registra el envío en el servidor; si ya se había enviado, pregunta antes de repetirlo
+async function guarded(it,row,action){
+  const to=row.querySelector("input").value.trim();
+  try{ await api("/api/admin/send",{t:it.code,to,force:false}); }
+  catch(e){
+    if(e.status!==409){ alert(e.message); return; }
+    const d=e.data||{};
+    const txt = d.opened && !d.sentAt ? "⚠️ Este código YA fue abierto por alguien.\n¿Enviarlo de todos modos?"
+      : `⚠️ Este link YA se envió${d.sentTo?" a "+d.sentTo:""}${d.sentAt?" ("+fmt(d.sentAt)+")":""}.${d.opened?"\nAdemás ya fue abierto.":""}\n¿Enviarlo otra vez?`;
+    if(!confirm(txt)) return;
+    try{ await api("/api/admin/send",{t:it.code,to,force:true}); }catch(e2){ alert(e2.message); return; }
+  }
+  row.classList.add("done");
+  row.querySelector(".sent").innerHTML=`✅ Enviado${to?" a <b>"+esc(to)+"</b>":""} · ahora`;
+  action(to);
+}
+
+/* ---------- Imagen de la tarjeta (para WhatsApp / descargar) ---------- */
+const loadImg = src => new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
+async function cardCanvas(code,type){
+  const store=$("store").value.trim()||"Parfums Decants", gold=type!=="visita", W=900, H=1340;
+  const c=document.createElement("canvas"); c.width=W; c.height=H; const x=c.getContext("2d");
+  const g=x.createLinearGradient(0,0,W,H); g.addColorStop(0,gold?"#0a0a0a":"#0b0c0f"); g.addColorStop(1,gold?"#1f1805":"#262b33");
+  rr(x,0,0,W,H,40); x.fillStyle=g; x.fill();
+  x.strokeStyle=gold?"#d4af37":"#c9ced6";
+  if(gold){ x.lineWidth=7; rr(x,12,12,W-24,H-24,32); x.stroke(); x.lineWidth=3; rr(x,28,28,W-56,H-56,22); x.stroke(); }
+  else { x.lineWidth=5; x.setLineDash([18,12]); rr(x,16,16,W-32,H-32,30); x.stroke(); x.setLineDash([]); }
+  const pg=x.createLinearGradient(W/2-190,0,W/2+190,0);
+  [["#8a6a1f","#f1d77a","#9c7a1c"],["#7b828f","#f4f6f9","#8d95a3"]][gold?0:1].forEach((col,i)=>pg.addColorStop(i/2,col));
+  rr(x,W/2-200,62,400,70,35); x.fillStyle=pg; x.fill();
+  x.fillStyle="#111"; x.font="800 32px Georgia"; x.textAlign="center"; x.textBaseline="middle";
+  x.fillText(gold?"★  GOLDEN  ★":"◆  PLATINUM  ◆",W/2,98);
+  let y=168; const bi=await loadImg("/tarjeta.jpg");
+  if(bi){ const w=700,h=bi.height*w/bi.width; x.save(); rr(x,100,y,w,h,18); x.clip(); x.drawImage(bi,100,y,w,h); x.restore(); y+=h+44; }
+  x.fillStyle=gold?"#d4af37":"#dfe3ea"; x.font="700 58px Georgia"; x.fillText("¡RASPA Y GANA!",W/2,y+28); y+=72;
+  x.fillStyle="#fff"; x.font="30px Georgia"; x.fillText(store,W/2,y+16); y+=56;
+  const tmp=document.createElement("div"); new QRCode(tmp,{text:linkFor(code),width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
+  const qc=tmp.querySelector("canvas");
+  x.fillStyle="#fff"; rr(x,W/2-175,y,350,350,20); x.fill(); x.drawImage(qc,W/2-150,y+25,300,300); y+=350+50;
+  x.fillStyle="#fff"; x.font="700 28px Georgia";
+  x.fillText(gold?"Escanea, raspa y gana un descuento o un decant 🎁":"Escanea, raspa y gana un descuento 🎁",W/2,y);
+  x.fillStyle="#9aa"; x.font="22px Georgia"; x.fillText(linkFor(code).replace(/^https?:\/\//,""),W/2,y+46);
+  return c;
+}
+async function shareImage(code,type){
+  const c=await cardCanvas(code,type);
+  c.toBlob(async blob=>{
+    const file=new File([blob],`tarjeta-${code}.png`,{type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], text:fullMsg(code)}); return; }catch(e){ if(e.name==="AbortError") return; }
+    }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
+  },"image/png");
+}
+
+/* ---------- Canjear / estadísticas ---------- */
+function show(id,html){const o=$(id);o.style.display="block";o.innerHTML=html;}
+async function lookup(){
+  try{const r=await api("/api/admin/lookup",{t:$("code").value});
+    show("out", `Tipo: <b>${r.type==="visita"?"Platinum (sin compra)":"Golden (con compra)"}</b>${r.sentAt?`<br>📲 Enviado${r.sentTo?" a <b>"+esc(r.sentTo)+"</b>":""} · ${fmt(r.sentAt)}`:""}<br>${r.openedAt?`🔓 Abierto: ${fmt(r.openedAt)}${r.bound?" (ligado a un celular)":""}`:"🔒 Aún no abierto"}<br>` + (r.prize ? `Premio: <b>${esc(r.prize.emoji)} ${esc(r.prize.text)}</b><br>Raspado: ${r.revealed?"sí":"no"} · Canjeado: ${r.redeemed?"<b style='color:#b00'>YA CANJEADO</b>":"no"}` : "Código válido, todavía no abierto."));
+  }catch(e){show("out","❌ "+esc(e.message));}
+}
+async function release(){
+  const c=$("code").value.trim().toUpperCase(); if(!c) return;
+  if(!confirm("¿Liberar el código "+c+"? La próxima persona que lo abra quedará como dueña.")) return;
+  try{ await api("/api/admin/release",{t:c}); show("out","🔓 Código liberado: "+esc(c)); }catch(e){ show("out","❌ "+esc(e.message)); }
+}
+async function redeem(){
+  try{const r=await api("/api/admin/redeem",{t:$("code").value}); show("out",`✅ Canjeado: <b>${esc(r.prize.emoji)} ${esc(r.prize.text)}</b>`);}
+  catch(e){show("out","❌ "+esc(e.message));}
+}
+async function stats(){
+  try{const r=await api("/api/admin/stats",{});
+    show("stats",`Tarjetas generadas: <b>${r.total}</b> (Golden: ${r.byType.compra} · Platinum: ${r.byType.visita})<br>Links digitales: <b>${r.digital.total}</b> · enviados ${r.digital.sent} · disponibles ${r.digital.pending}<br>Abiertas: <b>${r.opened}</b> · Jugadas: <b>${r.played}</b> · Canjeadas: <b>${r.redeemed}</b><br>`+Object.entries(r.byPrize).map(([k,v])=>`${esc(k)}: ${v}`).join("<br>")+
+      `<br><br>⭐ Reseñas: <b>${r.reviews}</b> · Promedio: <b>${r.avg||"-"}</b>`+
+      (r.comments.length?"<br><br>"+r.comments.map(c=>`${"★".repeat(c.stars)}${"☆".repeat(5-c.stars)} ${esc(c.comment)}`).join("<br>"):""));
+  }catch(e){show("stats","❌ "+esc(e.message));}
+}
+</script>
+</body>
+</html>
