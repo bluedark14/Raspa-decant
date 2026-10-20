@@ -1,0 +1,27 @@
+RASPA Y GANA - VERSION CLOUDFLARE (alternativa a Netlify)
+
+Estructura (todo igual que en Netlify, solo cambia el hosting):
+  public/index.html y public/raspa/index.html  -> el juego
+  public/admin/index.html                      -> panel de administrador
+  public/*.jpg                                 -> imagenes
+  functions/api/[[path]].js + functions/_lib.js -> servidor (usa base de datos D1)
+
+PASOS (desde el celular, en dash.cloudflare.com):
+1. Crea un repositorio nuevo en GitHub (ej. "Raspa-cf") y sube TODAS estas carpetas
+   y archivos respetando las carpetas (public, functions).
+   Importante: la carpeta se llama "functions" en la RAIZ del repositorio.
+2. Cloudflare -> Storage & Databases -> D1 -> Create database. Nombre: raspa
+   (la tabla se crea sola, no tienes que escribir nada).
+3. Workers & Pages -> Create -> Pages -> Connect to Git -> elige el repo.
+   - Project name: parfums-decants   (si te lo piden distinto, avisame:
+     el preview de WhatsApp usa https://parfums-decants.pages.dev/og.jpg)
+   - Build command: (vacio)    Build output directory: public
+4. Ya creado el proyecto: Settings -> Bindings -> Add -> D1 database
+   Variable name: DB   (en mayusculas)   Database: raspa
+5. Settings -> Variables and secrets -> Add: ADMIN_KEY = tu contrasena
+6. Deployments -> Retry / vuelve a desplegar para que tome el binding y la variable.
+7. Panel: https://TU-PROYECTO.pages.dev/admin
+   Juego: https://TU-PROYECTO.pages.dev/raspa/?t=CODIGO
+
+NOTA: los codigos de Netlify y de Cloudflare son bases de datos separadas.
+Usa UNA sola para tarjetas reales; la otra queda de respaldo.
