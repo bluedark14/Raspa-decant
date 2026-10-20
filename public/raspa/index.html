@@ -134,19 +134,21 @@ function showPrize(){
   let res;
   try { res = await api("/api/open", { t: ticket }); }
   catch(e){ $("msg").textContent = "Sin conexión. Intenta de nuevo."; return; }
-  if (res.status === 403){
-    // Pantalla completa "Código ya utilizado" (imagen) con el ticket real y el enlace de WhatsApp sobre el texto de la imagen
+  const fullScreen = (src, alt, ticketText) => {
     const o = document.createElement("div");
     o.style.cssText = "position:fixed;inset:0;z-index:50;background:#000;overflow:auto;display:flex;justify-content:center";
     o.innerHTML = `<div style="position:relative;width:min(100vw,520px);height:fit-content">
-      <img src="/ya-utilizado.jpg" alt="Código ya utilizado" style="width:100%;display:block">
+      <img src="${src}" alt="${alt}" style="width:100%;display:block">
       <a href="https://wa.me/522312834732" aria-label="Escribir por WhatsApp" style="position:absolute;left:66%;top:81.3%;width:20%;height:4.6%"></a>
-      <div style="position:absolute;left:0;right:0;top:89.3%;transform:translateY(-50%);text-align:center;color:#e8cf7a;letter-spacing:.12em;font-family:Georgia,serif;font-size:min(2.9vw,15px)">Ticket:&nbsp; ${ticket}</div>
+      <div style="position:absolute;left:0;right:0;top:89.3%;transform:translateY(-50%);text-align:center;color:#e8cf7a;letter-spacing:.12em;font-family:Georgia,serif;font-size:min(2.9vw,15px)">Ticket:&nbsp; ${ticketText}</div>
     </div>`;
     document.body.appendChild(o);
+  };
+  if (res.status === 403){
+    fullScreen("/ya-utilizado.jpg", "Código ya utilizado", ticket);   // imagen completa con el enlace de WhatsApp sobre el texto
     return;
   }
-  if (res.status === 404){ cv.style.display="none"; $("prize").innerHTML = '<div class="emoji">⚠️</div><div class="txt">Código no válido</div>'; $("msg").textContent = "Este código no existe. Revisa tu tarjeta."; return; }
+  if (res.status === 404){ fullScreen("/codigo-invalido.jpg", "Código no válido", ticket); return; }
   if (res.status !== 200){ $("msg").textContent = res.data.error || "Error. Intenta de nuevo."; return; }
   prize = res.data.prize; review = res.data.review || null; tier = res.data.type || null; applyTier(); await showPrize();
   if (res.data.revealed){
