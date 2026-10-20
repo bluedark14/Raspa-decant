@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Parfums Decants – Raspa y Gana</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="🎁 ¡Raspa y Gana! – Parfums Decants">
+<meta property="og:description" content="Toca tu link, rasca la tarjeta y descubre tu premio.">
+<meta property="og:image" content="https://parfums-decants.pages.dev/og.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{--bg:#0a0a0a;--gold:#d4af37;--pink:#9c7a1c}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 0,#2b2416,var(--bg));font-family:Georgia,"Times New Roman",serif;color:#fff;padding:20px;text-align:center}
+  h1{margin:0 0 4px;font-size:2rem;color:var(--gold);text-shadow:0 2px 0 #0006}
+  p.sub{margin:0 0 18px;opacity:.85}
+  .card{position:relative;width:min(88vw,340px);aspect-ratio:4/3;border-radius:18px;padding:8px;
+    background:linear-gradient(135deg,var(--gold),#ff9d2e);box-shadow:0 12px 30px #0008}
+  .inner{position:relative;width:100%;height:100%;border-radius:12px;overflow:hidden;background:#f6efdc}
+  .prize{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#111;padding:10px}
+  .prize .emoji{font-size:3.4rem;line-height:1}
+  .prize .txt{font-size:1.5rem;font-weight:800;margin-top:6px}
+  canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+  #msg{margin-top:20px;min-height:3em;font-size:1.05rem}
+  .badge{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:99px;background:var(--pink);font-weight:700;font-size:.9rem}
+  #rev{margin-top:18px;width:min(88vw,340px)}
+  .rv-t{font-size:1rem;color:var(--gold);margin-bottom:6px}
+  .stars{display:flex;justify-content:center;gap:4px}
+  .stars button{background:none;border:0;font-size:2.4rem;line-height:1;color:#555;cursor:pointer;padding:2px 4px;transition:transform .1s}
+  .stars button.on{color:var(--gold);text-shadow:0 0 10px #d4af3788}
+  .stars button:active{transform:scale(1.25)}
+  #cm{width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px solid #d4af3766;background:#151515;color:#fff;font:inherit;font-size:.95rem;resize:none;height:64px}
+  .send{margin-top:10px;padding:11px 22px;border:0;border-radius:99px;background:var(--gold);color:#111;font:inherit;font-weight:700;cursor:pointer}
+  .send:disabled{opacity:.4;cursor:default}
+  .rv-thanks{color:var(--gold);font-size:1.05rem}
+  #tier{display:none;margin:0 0 14px;padding:5px 18px;border-radius:99px;font-weight:800;letter-spacing:.25em;font-size:.8rem;color:#111;background:linear-gradient(135deg,#8a6a1f,#f1d77a,#9c7a1c)}
+  body.golden #tier,body.platinum #tier{display:inline-block}
+  body.platinum{--gold:#d5dae2;--pink:#8d95a3;background:radial-gradient(circle at 50% 0,#2a2f38,#0a0b0d)}
+  body.platinum #tier{background:linear-gradient(135deg,#7b828f,#f4f6f9,#8d95a3)}
+  body.platinum .card{background:linear-gradient(135deg,#e5e8ee,#8d95a3)}
+  .tk{margin-top:14px;font-size:.75rem;opacity:.55;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div style="letter-spacing:.35em;font-size:.8rem;color:var(--gold)">PARFUMS</div>
+<h1>¡Raspa y Gana!</h1>
+<p class="sub" style="margin-bottom:10px">DECANTS · Raspa la tarjeta con tu dedo</p>
+<div id="tier"></div>
+
+<div class="card"><div class="inner">
+  <div class="prize" id="prize"></div>
+  <canvas id="c"></canvas>
+</div></div>
+
+<div id="msg"></div>
+<div id="rev"></div>
+<div class="tk" id="tk"></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const ticket = (params.get("t")||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+const $ = id => document.getElementById(id);
+$("tk").textContent = ticket ? "Ticket: " + ticket : "";
+const cv = $("c"), ctx = cv.getContext("2d");
+let prize = null, review = null, tier = null;
+function applyTier(){
+  if (!tier) return;
+  const g = tier === "compra";
+  document.body.classList.add(g ? "golden" : "platinum");
+  $("tier").textContent = g ? "★ GOLDEN ★" : "◆ PLATINUM ◆";
+}
+
+// Identificador de este celular/navegador: el primero que abre un código lo reclama
+let DEV = "";
+try { DEV = localStorage.getItem("raspa_dev") || ""; if (!DEV) { DEV = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); localStorage.setItem("raspa_dev", DEV); } } catch(e) { DEV = DEV || String(Math.random()).slice(2) + Date.now(); }
+async function api(path, body){
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({...body, d: DEV})});
+  return { status:r.status, data: await r.json().catch(()=>({})) };
+}
+
+function showResult(extra){
+  cv.style.display = "none";
+  $("msg").innerHTML = `🎉 ¡Felicidades! Ganaste:<br><b>${prize.text}</b><br><span class="badge">Muestra esta pantalla a Parfums Decants para reclamar</span>` + (extra||"");
+  confetti();
+  renderReview();
+}
+function renderReview(){
+  if (!ticket) return;                       // en modo prueba no hay reseña
+  const box = $("rev");
+  if (review){
+    box.innerHTML = `<div class="rv-thanks">¡Gracias por tu reseña!<br>${"★".repeat(review.stars)}${"☆".repeat(5-review.stars)}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="rv-t">¿Qué te pareció? Califícanos</div>
+    <div class="stars">${[1,2,3,4,5].map(i=>`<button data-i="${i}" aria-label="${i} estrellas">★</button>`).join("")}</div>
+    <textarea id="cm" maxlength="300" placeholder="Cuéntanos tu experiencia (opcional)"></textarea>
+    <button id="send" class="send" disabled>Enviar reseña</button>`;
+  let sel = 0; const bs = [...box.querySelectorAll(".stars button")];
+  bs.forEach(b => b.onclick = () => { sel = +b.dataset.i; bs.forEach((x,i)=>x.classList.toggle("on", i < sel)); $("send").disabled = false; });
+  $("send").onclick = async () => {
+    $("send").disabled = true;
+    try {
+      const r = await api("/api/review", { t: ticket, stars: sel, comment: $("cm").value });
+      if (r.status === 200){ review = { stars: sel }; renderReview(); }
+      else { $("send").disabled = false; alert(r.data.error || "No se pudo enviar"); }
+    } catch(e){ $("send").disabled = false; alert("Sin conexión. Intenta de nuevo."); }
+  };
+}
+// Imagen del premio (se ajusta la tarjeta a su proporción para que no se corte)
+function prizeImage(){
+  if (prize.image) return prize.image;
+  if (/decant/i.test(prize.text)) return "/premio-2ml.jpg";
+  if (/^10%/.test(prize.text)) return "/premio-10.jpg";
+  if (/^5%/.test(prize.text)) return "/premio-5.jpg";
+  return null;
+}
+function showPrize(){
+  const img = prizeImage();
+  if (!img){ $("prize").innerHTML = `<div class="emoji">${prize.emoji}</div><div class="txt">${prize.text}</div>`; return Promise.resolve(); }
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => { document.querySelector(".card").style.aspectRatio = im.naturalWidth + " / " + im.naturalHeight; res(); };
+    im.onerror = () => { $("prize").innerHTML = `<div class="emoji">${prize.emoji}</div><div class="txt">${prize.text}</div>`; res(); };
+    im.src = img;
+    $("prize").innerHTML = `<img src="${img}" alt="${prize.text}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000">`;
+  });
+}
+
+(async function init(){
+  $("msg").textContent = "Cargando…";
+  let res;
+  try { res = await api("/api/open", { t: ticket }); }
+  catch(e){ $("msg").textContent = "Sin conexión. Intenta de nuevo."; return; }
+  if (res.status === 403){
+    // Pantalla completa "Código ya utilizado" (imagen) con el ticket real y el enlace de WhatsApp sobre el texto de la imagen
+    const o = document.createElement("div");
+    o.style.cssText = "position:fixed;inset:0;z-index:50;background:#000;overflow:auto;display:flex;justify-content:center";
+    o.innerHTML = `<div style="position:relative;width:min(100vw,520px);height:fit-content">
+      <img src="/ya-utilizado.jpg" alt="Código ya utilizado" style="width:100%;display:block">
+      <a href="https://wa.me/522312834732" aria-label="Escribir por WhatsApp" style="position:absolute;left:66%;top:81.3%;width:20%;height:4.6%"></a>
+      <div style="position:absolute;left:0;right:0;top:89.3%;transform:translateY(-50%);text-align:center;color:#e8cf7a;letter-spacing:.12em;font-family:Georgia,serif;font-size:min(2.9vw,15px)">Ticket:&nbsp; ${ticket}</div>
+    </div>`;
+    document.body.appendChild(o);
+    return;
+  }
+  if (res.status === 404){ cv.style.display="none"; $("prize").innerHTML = '<div class="emoji">⚠️</div><div class="txt">Código no válido</div>'; $("msg").textContent = "Este código no existe. Revisa tu tarjeta."; return; }
+  if (res.status !== 200){ $("msg").textContent = res.data.error || "Error. Intenta de nuevo."; return; }
+  prize = res.data.prize; review = res.data.review || null; tier = res.data.type || null; applyTier(); await showPrize();
+  if (res.data.revealed){
+    showResult(`<br><small style="opacity:.7">${res.data.redeemed ? "Este premio ya fue canjeado." : "Este ticket ya fue jugado."}</small>`);
+  } else {
+    $("msg").textContent = res.data.demo ? "Modo prueba (sin ticket). No se guarda." : "";
+    setup();
+  }
+})();
+
+function setup(){
+  const w = cv.clientWidth, h = cv.clientHeight, dpr = devicePixelRatio||1;
+  cv.width = w*dpr; cv.height = h*dpr; ctx.scale(dpr,dpr);
+  const g = ctx.createLinearGradient(0,0,w,h);
+  const pal = tier === "visita" ? ["#6b7280","#eceff3","#8d95a3"] : ["#8a6a1f","#e8cf7a","#9c7a1c"];
+  g.addColorStop(0,pal[0]); g.addColorStop(.5,pal[1]); g.addColorStop(1,pal[2]);
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  for(let i=0;i<500;i++){ ctx.fillStyle=`rgba(255,255,255,${Math.random()*.25})`; ctx.fillRect(Math.random()*w,Math.random()*h,2,2); }
+  ctx.fillStyle = tier === "visita" ? "#2b303a" : "#3d2e08"; ctx.font="800 24px Georgia"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("RASCA AQUÍ", w/2, h/2);
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.lineWidth = 36; ctx.lineCap = ctx.lineJoin = "round";
+
+  let down=false, last=null, moves=0, finished=false;
+  const pos = e => { const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; };
+  cv.addEventListener("pointerdown", e=>{ down=true; last=pos(e); cv.setPointerCapture(e.pointerId); dot(last); });
+  cv.addEventListener("pointermove", e=>{
+    if(!down) return; const p=pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p;
+    if(++moves % 8 === 0) check();
+  });
+  const up=()=>{down=false; check();};
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  function dot(p){ ctx.beginPath(); ctx.arc(p.x,p.y,18,0,7); ctx.fill(); }
+  async function check(){
+    if (finished) return;
+    const d = ctx.getImageData(0,0,cv.width,cv.height).data; let clear=0, n=0;
+    for(let i=3;i<d.length;i+=64){ n++; if(d[i]===0) clear++; }
+    if(clear/n > .5){
+      finished = true;
+      if (ticket) { try { await api("/api/reveal", { t: ticket }); } catch(e){} }
+      showResult();
+    }
+  }
+}
+
+function confetti(){
+  const c=document.createElement("canvas"); c.style.cssText="position:fixed;inset:0;pointer-events:none;z-index:9";
+  document.body.appendChild(c); c.width=innerWidth; c.height=innerHeight; const x=c.getContext("2d");
+  const cols=["#d4af37","#f1d77a","#fff","#9c7a1c","#e8cf7a"];
+  const ps=Array.from({length:130},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,v:2+Math.random()*4,s:5+Math.random()*6,c:cols[Math.random()*5|0],r:Math.random()*6}));
+  let f=0;(function a(){x.clearRect(0,0,c.width,c.height);ps.forEach(p=>{p.y+=p.v;p.r+=.1;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(0,0,p.s,p.s*.6);x.restore();});
+    if(++f<260)requestAnimationFrame(a);else c.remove();})();
+}
+</script>
+</body>
+</html>
